@@ -23,3 +23,5 @@ pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
  - https://mirrors.ustc.edu.cn/anaconda/pkgs/free/
 5. 返回上一路径
 CD ../
+6. 刷新环境变量，从命令行到达base
+source ~/.bash_profile
