@@ -15,49 +15,69 @@ import torch
 x = np.random.rand(100)  # accuracy
 y = np.random.rand(100)  # regularized computation amounts
 
-a = 20 * np.random.rand(50)  # weight_1
-b = 20 * np.random.rand(50)  # weight_2
+# a = 20 * np.random.rand(50)  # weight_1
+# b = 20 * np.random.rand(50)  # weight_2
 
 m = []
 n = []
+metric = []
+train_data = []
 
-lamd = 0.1  # threshold for acc
+lamd = 0.2  # threshold for acc
 mu = 0.2  # threshold for computation amount
-for i in range(len(a)):
-    for j in range(len(b)):
-        print("a = %f, b = %f" % (a[i], b[j]))
-        # 每次从x,y中各取出两个值进行比较
-        for p in range(len(x)-1):
-            if x[p] > x[p+1]:
-                fx1 = 1 / (1 + np.exp(-a[i] * (x[p] - 0.5)))
-                fx2 = 1 / (1 + np.exp(-a[i] * (x[p + 1] - 0.5)))
-            else:  # 调整，使得前一项大于后一项
-                t = x[p]
-                x[p] = x[p+1]
-                x[p+1] = t
+# 每次从x,y中各取出两个值进行比较
+for p in range(len(x)-1):
+    fx1 = 1 / (1 + np.exp(-10 * (x[p] - 0.5)))
+    fx2 = 1 / (1 + np.exp(-10 * (x[p+1] - 0.5)))
 
-                fx1 = 1 / (1 + np.exp(-a[i] * (x[p] - 0.5)))
-                fx2 = 1 / (1 + np.exp(-a[i] * (x[p+1] - 0.5)))
+    for q in range(len(y)-1):
+        fy1 = np.exp(-y[q])
+        fy2 = np.exp(-y[q+1])
 
-            for q in range(len(y)-1):
-                if y[q] > y[q + 1]:
-                    fy1 = np.exp(-b[j] * y[q])
-                    fy2 = np.exp(-b[j] * y[q+1])
-                else:
-                    t = y[q]
-                    y[q] = y[q + 1]
-                    y[q + 1] = t
+        # judge procedure
+        # save all qualified x,y,fx+fy to fit a Gaussian process
 
-                    fy1 = np.exp(-b[j] * y[q])
-                    fy2 = np.exp(-b[j] * y[q+1])
+        if x[p]-x[p+1] > lamd and mu < y[q]-y[q+1] < 2*mu:
+            if fx1+fy1 > fx2+fy2:
+                metric.append(1)
+                train_data.append([])
+            else:
+                metric.append(0)
 
-                if x[p]-x[p+1] < lamd and y[q]-y[q+1] > mu and fx1+fy1 < fx2+fy2:
-                    if x[p]-x[p+1] > lamd and y[q]-y[q+1] < mu and fx1+fy1 > fx2+fy2:
-                        # if x[p] - x[p + 1] < lamd and y[q] - y[q + 1] > mu and fx1 + fy1 < fx2 + fy2:
-                            if x[p] - x[p + 1] < lamd and y[q] - y[q + 1] < mu and fx1 + fy1 > fx2 + fy2:
-                                print("a,b is qualified")
-                                m.append(a[i])
-                                n.append(b[j])
+        elif x[p]-x[p+1] > lamd and y[q]-y[q+1] > 2*mu:
+            if fx1+fy1 < fx2+fy2:
+                metric.append(2)
+            else:
+                metric.append(0)
+
+        elif x[p]-x[p + 1] > -lamd and y[q]-y[q + 1] < -2*mu:
+            if fx1+fy1 > fx2+fy2:
+                metric.append(3)
+            else:
+                metric.append(0)
+
+        elif x[p]-x[p + 1] < -2*lamd:
+            if fx1+fy1 < fx2+fy2:
+                metric.append(4)
+            else:
+                metric.append(0)
+
+
+# 画出metric的柱状图，以观察条件满足情况
+data_dict = {}
+for key in metric:
+    data_dict[key] = data_dict.get(key, 0) + 1
+
+print("data_dict:", data_dict)
+num = [index[1] for index in sorted(data_dict.items())]  # 统计符合各约束条件的数量
+labels = ['No', 'Constraint 1', 'Constraint 2', 'Constraint 3', 'Constraint 4']
+plt.bar(range(len(num)), num, tick_label=labels)
+plt.show()
+
+
+
+
+
 
 
 
