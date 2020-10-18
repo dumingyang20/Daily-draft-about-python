@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.linalg import cho_solve
 from numpy.linalg import cholesky
 from itertools import cycle
-from draft_pytorch import train_data
+from GP_train import train_data
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 
@@ -113,7 +113,7 @@ z = means.reshape(test_d1.shape)  # 预测值
 # plots here.
 fig = plt.figure(figsize=(7, 5))
 ax = Axes3D(fig)
-ax.plot_surface(test_d1, test_d2, z, cmap=cm.coolwarm, linewidth=0, alpha=0.2, antialiased=False) # 绘制表面
+ax.plot_surface(test_d1, test_d2, z, cmap=cm.coolwarm, linewidth=0, alpha=0.2, antialiased=False)  # 绘制表面
 ax.scatter(np.asarray(sample_x)[:, 0], np.asarray(sample_x)[:, 1], sample_y, c=sample_y, cmap=cm.coolwarm)  # 在表面绘制散点
 ax.contourf(test_d1, test_d2, z, zdir='z', offset=0, cmap=cm.coolwarm, alpha=0.6)  # 绘制投影
 # plt.savefig('GP.pdf')  # 保存成为PDF格式
