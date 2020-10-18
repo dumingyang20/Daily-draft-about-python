@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 from scipy.linalg import cho_solve
 from numpy.linalg import cholesky
 from itertools import cycle
+from draft_pytorch import train_data
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
 
 
 class SimpleGP():
@@ -32,7 +35,9 @@ class SimpleGP():
         x1, x2: np.array
             arrays containing x locations
         """
-        return (self.width_scale ** 2) * np.exp(-np.subtract.outer(x1, x2) ** 2 / (2 * self.length_scale ** 2))
+        dis = np.sum(x1**2, 1).reshape(-1, 1) + np.sum(x2**2, 1) - 2 * np.dot(x1, x2.T)
+        # return (self.width_scale ** 2) * np.exp(-np.subtract.outer(x1, x2) ** 2 / (2 * self.length_scale ** 2))
+        return (self.width_scale ** 2) * np.exp(-dis / (2 * self.length_scale ** 2))
 
     def fit(self, sample_x, sample_y, sample_s):
         """
@@ -53,9 +58,10 @@ class SimpleGP():
         self.sample_x = np.array(sample_x)
 
         S = self._exponential_cov(sample_x, sample_x)  # 协方差矩阵K(X,X)
-        d = np.diag(np.array(sample_s) ** 2 + self.noise)  # 构造对角矩阵 方差+噪声
+        # d = np.diag(np.array(sample_s) ** 2 + self.noise)  # 构造对角矩阵 方差+噪声
 
-        self.lower_cholesky = cholesky(S + d)  # cholesky分解，得到下三角矩阵，条件：对称正定阵
+        # self.lower_cholesky = cholesky(S + d)  # cholesky分解，得到下三角矩阵，条件：对称正定阵
+        self.lower_cholesky = cholesky(S + 1e-8 * np.eye(len(S)))
         self.weighted_sample_y = cho_solve((self.lower_cholesky, True), sample_y)
         # 上述两步为求解：(K(X,X)+std^2*I) * weighted_sample_y = sample_y
         # 为后续的预测做准备
@@ -68,13 +74,18 @@ class SimpleGP():
         test_x : np.array
             locations where we want to test
         """
-        test_x = np.array([test_x]).flatten()
-        means, stds = [], []
-        for row in test_x:
-            S0 = self._exponential_cov(row, self.sample_x)  # K(X,X')
-            v = cho_solve((self.lower_cholesky, True), S0)
-            means.append(np.dot(S0, self.weighted_sample_y))  # 均值与sample相同
-            stds.append(np.sqrt(self.width_scale ** 2 - np.dot(S0, v)))
+        # test_x = np.array([test_x]).flatten()
+        test_x = np.array(test_x)
+        # means, stds = [], []
+        S0 = self._exponential_cov(self.sample_x, test_x)  # K(X,X')
+        v = cho_solve((self.lower_cholesky, True), S0)
+        means = np.dot(S0.T, self.weighted_sample_y)  # 均值与sample相同
+        stds = np.sqrt(self._exponential_cov(test_x, test_x) - np.dot(S0.T, v))
+        # for row in test_x:
+        #     S0 = self._exponential_cov(row, self.sample_x)  # K(X,X')
+        #     v = cho_solve((self.lower_cholesky, True), S0)
+        #     means.append(np.dot(S0, self.weighted_sample_y))  # 均值与sample相同
+        #     stds.append(np.sqrt(self.width_scale ** 2 - np.dot(S0, v)))
         return means, stds
 
     def sample(self, test_x, samples=1):
@@ -98,8 +109,8 @@ class SimpleGP():
 
 
 # Insert data here.
-sample_x = [0.5, 2, -2]
-sample_y = [2, 1.5, -0.5]
+sample_x = train_data[:, 0:2]
+sample_y = train_data[:, 2]
 sample_s = [0.01, 0.05, 0.125]
 
 WIDTH_SCALE = 1
@@ -108,19 +119,31 @@ SAMPLES = 8
 model = SimpleGP(WIDTH_SCALE, LENGTH_SCALE)
 model.fit(sample_x, sample_y, sample_s)
 
-test_x = np.arange(-5, 5, .1)
+# test_x = np.arange(-5, 5, .1)
+test_d1 = np.arange(-5, 5, 0.2)
+test_d2 = np.arange(-5, 5, 0.2)
+test_d1, test_d2 = np.meshgrid(test_d1, test_d2)
+test_x = [[d1, d2] for d1, d2 in zip(test_d1.ravel(), test_d2.ravel())]
 means, stds = model.interval(test_x)
-samples = model.sample(test_x, SAMPLES)
+z = means.reshape(test_d1.shape)
+# samples = model.sample(test_x, SAMPLES)
 
 # plots here.
-fig, ax = plt.subplots(figsize=(12, 5))
-ax.set_ylim([-3, 3])
-ax.axis('off')
-
-colors = cycle(['g', 'b', 'k', 'y', 'c', 'r', 'm'])
-plt.errorbar(test_x, means, yerr=stds, ecolor='g', linewidth=1.5, elinewidth=0.5, alpha=0.75)
-
-for sample, c in zip(samples, colors):
-    plt.plot(test_x, sample, c, linewidth=2. * np.random.rand(), alpha=0.5)
-
+fig = plt.figure(figsize=(7, 5))
+ax = Axes3D(fig)
+ax.plot_surface(test_d1, test_d2, z, cmap=cm.coolwarm, linewidth=0, alpha=0.2, antialiased=False)
+ax.scatter(np.asarray(sample_x)[:,0], np.asarray(sample_x)[:,1], sample_y, c=sample_y, cmap=cm.coolwarm)
+ax.contourf(test_d1, test_d2, z, zdir='z', offset=0, cmap=cm.coolwarm, alpha=0.6)
 plt.show()
+
+# fig, ax = plt.subplots(figsize=(12, 5))
+# ax.set_ylim([-3, 3])
+# ax.axis('off')
+#
+# colors = cycle(['g', 'b', 'k', 'y', 'c', 'r', 'm'])
+# plt.errorbar(test_x, means, yerr=stds, ecolor='g', linewidth=1.5, elinewidth=0.5, alpha=0.75)
+#
+# for sample, c in zip(samples, colors):
+#     plt.plot(test_x, sample, c, linewidth=2. * np.random.rand(), alpha=0.5)
+#
+# plt.show()
