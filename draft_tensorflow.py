@@ -52,6 +52,7 @@ import os
 #     writer = csv.writer(f)
 #     writer.writerow(a)
 
+
 # 2. 从csv文件中画图
 lines1 = []
 files = ['optimized_model1.csv']
@@ -62,6 +63,7 @@ for file in files:
             temp[-1] = temp[-1][:-1]  # remove \n
             temp[0:50] = [float(i) for i in temp[0:50]]  # convert accuracy to float
             lines1.append(temp)
+
 
 lines2 = []
 files = ['optimized_model2.csv']
@@ -297,14 +299,14 @@ plt.show()
 # plt.show()
 
 # 三维图
-# from mpl_toolkits.mplot3d import Axes3D
-# x = np.arange(0, 1, 0.01)  # 精度
-# y = np.arange(0, 1, 0.01)  # 运算量
-# fig = plt.figure()
-# ax = Axes3D(fig)
-# X, Y = np.meshgrid(x, y)  # 网格的创建
+from mpl_toolkits.mplot3d import Axes3D
+x = np.arange(0, 1, 0.01)  # 精度
+y = np.arange(0, 1, 0.01)  # 运算量
+fig = plt.figure()
+ax = Axes3D(fig)
+X, Y = np.meshgrid(x, y)  # 网格的创建
 # # fa_1 = X**(1/2)
-# fa_1 = 1/(1+np.exp(-10*(X-0.5)))
+fa_1 = 1/(1+np.exp(-10*(X-0.5)))
 # # fe_1 = -Y + 1
 # fe_1 = -Y*Y
 # Z = 1/2 * (fa_1 + fe_1)
@@ -316,12 +318,12 @@ plt.show()
 # （二）第二种
 # 此法效果较好
 # fa_1 = 1/(1+np.exp(-10*(X-0.5)))
-# fe_1 = np.exp(-Y)
-# Z = 0.5*(fa_1+fe_1)
-# plt.xlabel('x')
-# plt.ylabel('y')
-# ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap='rainbow')
-# plt.show()
+fe_1 = np.exp(-Y)
+Z = 0.5*(fa_1+fe_1)
+plt.xlabel('x')
+plt.ylabel('y')
+ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap='rainbow')
+plt.show()
 
 
 # 利用训练后保存的模型对其他数据集进行分类
@@ -330,6 +332,7 @@ root = 'D:/project/CNN_signal/dataset/test'  # 其他数据集所处位置
 
 # 1. 加载模型
 new_model = models.load_model('my_model.h5')
+
 
 # 2. 准备数据集
 # 创建CSV
@@ -378,6 +381,7 @@ def load_image(root):
     images, labels = load_csv(root, 'images.csv', name2label)
     return images, labels, name2label
 
+
 # 图片预处理
 def preprocess(x, y):
     x = tf.io.read_file(x)  # x为图片的路径list
@@ -388,6 +392,7 @@ def preprocess(x, y):
     x = tf.cast(x, dtype=tf.float32) / 255.
     y = tf.convert_to_tensor(y)  # 转换成张量 y为图片的数字编码
     return x, y
+
 
 images2, labels2, table2 = load_image(root)
 test_images = tf.data.Dataset.from_tensor_slices((images2, labels2))  # 所得的为tuple对象

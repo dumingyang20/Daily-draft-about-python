@@ -39,7 +39,7 @@ class SimpleGP():
         # return (self.width_scale ** 2) * np.exp(-np.subtract.outer(x1, x2) ** 2 / (2 * self.length_scale ** 2))
         return (self.width_scale ** 2) * np.exp(-dis / (2 * self.length_scale ** 2))
 
-    def fit(self, sample_x, sample_y, sample_s):
+    def fit(self, sample_x, sample_y):
         """
         Save for later use the Cholesky matrix
         associated with the inverse that appears
@@ -80,70 +80,42 @@ class SimpleGP():
         S0 = self._exponential_cov(self.sample_x, test_x)  # K(X,X')
         v = cho_solve((self.lower_cholesky, True), S0)
         means = np.dot(S0.T, self.weighted_sample_y)  # 均值与sample相同
-        stds = np.sqrt(self._exponential_cov(test_x, test_x) - np.dot(S0.T, v))
+        cov = self._exponential_cov(test_x, test_x) - np.dot(S0.T, v)
         # for row in test_x:
         #     S0 = self._exponential_cov(row, self.sample_x)  # K(X,X')
         #     v = cho_solve((self.lower_cholesky, True), S0)
         #     means.append(np.dot(S0, self.weighted_sample_y))  # 均值与sample相同
         #     stds.append(np.sqrt(self.width_scale ** 2 - np.dot(S0, v)))
-        return means, stds
-
-    def sample(self, test_x, samples=1):
-        """
-        Obtain function samples from the posterior
-        parameters
-        ----------
-        test_x : np.array
-            locations where we want to test
-        samples : int
-            Number of samples to take
-        """
-        S0 = self._exponential_cov(test_x, self.sample_x)  # K(X,X')
-        # construct covariance matrix of sampled points.
-        m = []
-        for row in S0:
-            m.append(cho_solve((self.lower_cholesky, True), row))
-        cov = self._exponential_cov(test_x, test_x) - np.dot(S0, np.array(m).T)
-        mean = np.dot(S0, self.weighted_sample_y)
-        return np.random.multivariate_normal(mean, cov, samples)  # 生成多维高斯分布
+        return means, cov
 
 
 # Insert data here.
-sample_x = train_data[:, 0:2]
+sample_x = train_data[:, 0:2]  # 训练点集
 sample_y = train_data[:, 2]
-sample_s = [0.01, 0.05, 0.125]
+# sample_s = [0.01, 0.05, 0.125]
 
 WIDTH_SCALE = 1
 LENGTH_SCALE = 1
 SAMPLES = 8
 model = SimpleGP(WIDTH_SCALE, LENGTH_SCALE)
-model.fit(sample_x, sample_y, sample_s)
+model.fit(sample_x, sample_y)
 
-# test_x = np.arange(-5, 5, .1)
-test_d1 = np.arange(-5, 5, 0.2)
-test_d2 = np.arange(-5, 5, 0.2)
-test_d1, test_d2 = np.meshgrid(test_d1, test_d2)
-test_x = [[d1, d2] for d1, d2 in zip(test_d1.ravel(), test_d2.ravel())]
-means, stds = model.interval(test_x)
-z = means.reshape(test_d1.shape)
+# 测试
+test_d1 = np.arange(0, 1, .02)  # 50个x坐标
+test_d2 = np.arange(0, 1, .02)  # 50个y坐标
+test_d1, test_d2 = np.meshgrid(test_d1, test_d2)  # 生成网格
+test_x = [[d1, d2] for d1, d2 in zip(test_d1.ravel(), test_d2.ravel())]  # 共2500个测试点
+means, cov = model.interval(test_x)
+z = means.reshape(test_d1.shape)  # 预测值
 # samples = model.sample(test_x, SAMPLES)
+
 
 # plots here.
 fig = plt.figure(figsize=(7, 5))
 ax = Axes3D(fig)
-ax.plot_surface(test_d1, test_d2, z, cmap=cm.coolwarm, linewidth=0, alpha=0.2, antialiased=False)
-ax.scatter(np.asarray(sample_x)[:,0], np.asarray(sample_x)[:,1], sample_y, c=sample_y, cmap=cm.coolwarm)
-ax.contourf(test_d1, test_d2, z, zdir='z', offset=0, cmap=cm.coolwarm, alpha=0.6)
+ax.plot_surface(test_d1, test_d2, z, cmap=cm.coolwarm, linewidth=0, alpha=0.2, antialiased=False) # 绘制表面
+ax.scatter(np.asarray(sample_x)[:, 0], np.asarray(sample_x)[:, 1], sample_y, c=sample_y, cmap=cm.coolwarm)  # 在表面绘制散点
+ax.contourf(test_d1, test_d2, z, zdir='z', offset=0, cmap=cm.coolwarm, alpha=0.6)  # 绘制投影
+# plt.savefig('GP.pdf')  # 保存成为PDF格式
 plt.show()
 
-# fig, ax = plt.subplots(figsize=(12, 5))
-# ax.set_ylim([-3, 3])
-# ax.axis('off')
-#
-# colors = cycle(['g', 'b', 'k', 'y', 'c', 'r', 'm'])
-# plt.errorbar(test_x, means, yerr=stds, ecolor='g', linewidth=1.5, elinewidth=0.5, alpha=0.75)
-#
-# for sample, c in zip(samples, colors):
-#     plt.plot(test_x, sample, c, linewidth=2. * np.random.rand(), alpha=0.5)
-#
-# plt.show()

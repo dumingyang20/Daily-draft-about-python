@@ -14,8 +14,8 @@ import random
 # 1. 调试新的balance function
 
 np.random.seed(26)
-x = np.random.rand(100)  # accuracy
-y = np.random.rand(100)  # regularized computation amounts
+x = np.random.rand(200)  # accuracy
+y = np.random.rand(200)  # regularized computation amounts
 
 # a = 20 * np.random.rand(50)  # weight_1
 # b = 20 * np.random.rand(50)  # weight_2
