@@ -201,7 +201,13 @@ from matplotlib.pyplot import MultipleLocator
 # plt.show()
 
 
-# 3. 分割csv文件为多个文件
+# 3. 对训练结果先进行排序，而后分割csv文件为多个文件
+# 精度排序函数
+def sort_by_accuracy(data):
+    return data[0]
+
+
+# 文件分割函数
 def separate(root, files, B, K):
     # load csv file
     os.chdir(root)
@@ -216,13 +222,17 @@ def separate(root, files, B, K):
             with open('train_history_1.csv', mode='a+', newline='') as f:
                 data = [result[0]]
                 data.extend(result[j+1] for j in range(35))
+                # 按照精度进行排序
+                data.sort(key=sort_by_accuracy, reverse=True)
                 writer = csv.writer(f)
                 writer.writerows(data)  # 多行写入
 
         else:
             file_name = 'train_history_'+str(i+1)+'.csv'
             with open(file_name, mode='a+', newline='') as f:
-                data = result[36:(36+K*i)]
+                data = result[0:(36+K*i)]
+                # 按照精度进行排序
+                data.sort(key=sort_by_accuracy, reverse=True)
                 writer = csv.writer(f)
                 writer.writerows(data)
 
