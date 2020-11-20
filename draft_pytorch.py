@@ -10,6 +10,7 @@ import os
 import torch
 import random
 from matplotlib.pyplot import MultipleLocator
+import matplotlib.patches as mpatches
 
 
 # 1. 调试新的balance function
@@ -133,10 +134,10 @@ from matplotlib.pyplot import MultipleLocator
 #
 # acc_ini = get_data(root, 'SAC_ini.csv', 'accuracy')  # initialization model
 # comp_ini = get_data(root, 'SAC_ini.csv', 'computation')
-#
-#
-# # plot here
-# # (1) curve line figure
+
+
+# plot here
+# (1) curve line figure
 # plt.figure(1)
 # plt.plot([comp_only[:][i][2] for i in range(len(comp_only))], label='accuracy_only model')
 # plt.plot([comp_GP[:][i][2] for i in range(len(comp_only))], '-*', label='GP-based model')
@@ -145,9 +146,9 @@ from matplotlib.pyplot import MultipleLocator
 # plt.xlabel('Block')
 # plt.ylabel('Computation cost')
 # plt.grid()
-# # plt.show()
-# # plt.savefig('Computation cost.pdf')
-#
+# plt.show()
+# plt.savefig('Computation cost.pdf')
+
 # plt.figure(2)
 # plt.plot([acc_only[:][i][2] for i in range(len(acc_only))], label='accuracy_only model')
 # plt.plot([acc_GP[:][i][2] for i in range(len(acc_GP))], '-*', label='GP-based model')
@@ -157,10 +158,10 @@ from matplotlib.pyplot import MultipleLocator
 # plt.xlabel('Block')
 # plt.ylabel('Validation accuracy')
 # plt.grid()
-# # plt.show()
-# # plt.savefig('Validation accuracy.pdf')
-#
-#
+# plt.show()
+# plt.savefig('Validation accuracy.pdf')
+
+
 # plt.figure(3)
 # plt.plot(acc_GP[:][:], 'r-')
 # plt.plot(acc_only[:][:], 'b-+')
@@ -169,9 +170,9 @@ from matplotlib.pyplot import MultipleLocator
 # plt.xlabel('Block')
 # plt.ylabel('Validation accuracy')
 # plt.grid()
-# # plt.show()
-# # plt.savefig('Validation accuracy_1.pdf')
-#
+# plt.show()
+# plt.savefig('Validation accuracy_1.pdf')
+
 # plt.figure(4)
 # plt.plot(comp_GP[:][:], 'r-')
 # plt.plot(comp_only[:][:], 'b-+')
@@ -179,11 +180,11 @@ from matplotlib.pyplot import MultipleLocator
 # plt.xlabel('Block')
 # plt.ylabel('Computation cost')
 # plt.grid()
-# # plt.show()
-# # plt.savefig('Computation cost_2.pdf')
-#
-#
-# # (2) scatter figure
+# plt.show()
+# plt.savefig('Computation cost_2.pdf')
+
+
+# (2) scatter figure
 # model_index = np.arange(1, 11)
 # plt.figure(5)
 # for i in range(len(acc_GP)):
@@ -237,6 +238,108 @@ def separate(root, files, B, K):
                 writer.writerows(data)
 
 
-root = '/Users/mydu/project/Gaussian-process-for-the-NAS/results/block/lambda=0.3,mu=0.1/B=8'
-separate(root, 'train_history(accuracy).csv', B=8, K=10)
+root = '/Users/mydu/project/Daily-draft-about-python'
+separate(root, 'train_history.csv', B=8, K=10)
 
+# 4. 修改csv画图策略
+# 针对最新的NAS训练方法及csv文件分割后结果画图
+# compare their accuracy and computation cost mainly
+# define a function to traverse folder and extract target data among specific files
+
+
+def get_data(dir_name, file_name, num):
+
+    assert os.path.isdir(dir_name)  # 确定为文件夹
+    target_dir = os.path.join(dir_name, file_name)
+
+    assert os.path.exists(target_dir)  # 确定指定文件存在
+    data1, data2 = load_csv(target_dir, num)
+
+    return data1, data2
+
+
+def load_csv(file_name, num):
+
+    with open(file_name) as f:
+        reader = csv.reader(f)
+        result = list(reader)
+
+    # get the 2nd column of csv file, top_num -- accuracy
+    # get the 3rd column of csv file, top_num -- computation
+    acc = []
+    comp = []
+    for i in range(num):
+        acc.append(float(result[i][1]))
+        comp.append(float(result[i][2]))
+
+    return acc, comp
+
+
+B = 8
+root = '/Users/mydu/project/Daily-draft-about-python/result'
+
+# accuracy_only model
+pass
+
+# GP-based model
+acc_GP, comp_GP = [], []
+for j in range(B):
+    acc_temp, comp_temp = get_data(root, 'train_history_'+str(j+1)+'.csv', num=10)
+    acc, comp = acc_GP.append(acc_temp), comp_GP.append(comp_temp)
+
+# balance_function_initialization model
+pass
+
+# plot here
+# (1) curve line figure
+plt.figure(1)
+# plt.plot([comp_only[i][:] for i in range(len(comp_only))], color='red', label='accuracy_only model')
+
+plt.plot([comp_GP[i][:] for i in range(len(comp_GP))], '-*', color='blue')
+
+# plt.plot([comp_ini[i][:] for i in range(len(comp_ini))], '-+', color='black', label='initialization model')
+
+GP_patch = mpatches.Patch(color='blue')
+plt.legend(handles=[GP_patch], labels=['GP-based model'])
+
+plt.xlabel('Block')
+plt.ylabel('Computation cost')
+plt.grid()
+plt.show()
+# plt.savefig('Computation cost.pdf')
+
+plt.figure(2)
+# plt.plot([acc_only[i][:] for i in range(len(acc_only))], color='red', label='accuracy_only model')
+
+plt.plot([acc_GP[i][:] for i in range(len(acc_GP))], '-*', color='blue')
+
+# plt.plot([acc_ini[i][:] for i in range(len(acc_ini))], '-+', color='black', label='initialization model')
+
+plt.ylim((0, 1))
+
+GP_patch = mpatches.Patch(color='blue')
+plt.legend(handles=[GP_patch], labels=['GP-based model'])
+
+plt.xlabel('Block')
+plt.ylabel('Validation accuracy')
+plt.grid()
+plt.show()
+plt.savefig('Validation accuracy.pdf')
+
+
+# (2) scatter figure
+# model_index = np.arange(1, 11)
+# plt.figure(5)
+# for i in range(len(acc_GP)):
+#     plt.scatter(model_index, acc_GP[:][i], marker='o', c='r')
+# for i in range(len(acc_ini)):
+#     plt.scatter(model_index, acc_ini[:][i], marker='x', c='k')
+# for i in range(len(acc_only)):
+#     plt.scatter(model_index, acc_only[:][i], marker='v', c='b')
+# plt.xlabel('Model Index')
+# plt.ylabel('Accuracy')
+#
+# x_major_locator = MultipleLocator(1)  # 把x轴的刻度间隔设置为1，并存在变量里
+# ax = plt.gca()  # ax为两条坐标轴的实例
+# ax.xaxis.set_major_locator(x_major_locator)
+# plt.show()
