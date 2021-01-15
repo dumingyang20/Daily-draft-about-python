@@ -13,6 +13,7 @@ import random
 from matplotlib.pyplot import MultipleLocator
 import matplotlib.patches as mpatches
 from PIL import Image
+import math
 
 # 1. 调试新的balance function
 
@@ -372,30 +373,108 @@ from PIL import Image
 
 
 # plot grid figures
-images_per_row = 7  # display 8 images per row (7 epochs + ground_truth)
-n_rows = 4  # 4 columns in total
-size = 256
-figures_dir = '/Users/mydu/Desktop/examples/fixed_loss/'
-show_epoch = [0, 2, 10, 20, 50, 100, 200]
-assert len(show_epoch) == images_per_row
-display_grid = np.zeros((size*n_rows, size*(images_per_row+1)))
+# images_per_row = 7  # display 8 images per row (7 epochs + ground_truth)
+# n_rows = 4  # 4 columns in total
+# size = 256
+# figures_dir = '/Users/mydu/Desktop/examples/fixed_loss/'
+# show_epoch = [0, 2, 10, 20, 50, 100, 200]
+# assert len(show_epoch) == images_per_row
+# display_grid = np.zeros((size*n_rows, size*(images_per_row+1)))
+#
+# # add 30 pixels interval between figs
+# for i in range(n_rows):
+#     for j in range(images_per_row):
+#         display_grid[i*size:(i+1)*size, j*size+30*(j+1):(j+1)*size+30*(j+1)] = Image.open(figures_dir + str(i+1)
+#                                                                                           + '/train_' + str(i+1) + '_'
+#                                                                                           + str(show_epoch[j]) + '.png').convert('L')
+#
+# scale = 1./size
+# plt.figure(figsize=(scale*display_grid.shape[1],
+#                     scale*display_grid.shape[0]))
+# plt.imshow(display_grid, aspect='auto', cmap='viridis')
+# plt.xticks([])
+# plt.yticks([])
+# # plt.savefig('CBDNet_example.pdf')
+# plt.show()
 
-# add 30 pixels interval between figs
-for i in range(n_rows):
-    for j in range(images_per_row):
-        display_grid[i*size:(i+1)*size, j*size+30*(j+1):(j+1)*size+30*(j+1)] = Image.open(figures_dir + str(i+1)
-                                                                                          + '/train_' + str(i+1) + '_'
-                                                                                          + str(show_epoch[j]) + '.png').convert('L')
 
-scale = 1./size
-plt.figure(figsize=(scale*display_grid.shape[1],
-                    scale*display_grid.shape[0]))
-plt.imshow(display_grid, aspect='auto', cmap='viridis')
-plt.xticks([])
-plt.yticks([])
-# plt.savefig('CBDNet_example.pdf')
+# 5. Gramian angular field
+# load raw radar time-series signal
+os.chdir('/Users/mydu/project/CNN_signal/IF data/dataset/noisefree')
+with open('LFM_11.txt', 'rb') as file_pi:
+    x1 = pickle.load(file_pi)
+
+# get real part
+for index in range(len(x1)):
+    x1[index] = x1[index].real
+
+# plot data in Cartesian coordinates
+plt.figure(1)
+plt.plot(x1[1])
+plt.title('Time-series radar signal')
 plt.show()
 
 
+# rescale to [-1, 1] or [0, 1]
+def rescale(x, mode):
+    """Normalize the x to [-1, 1] or [0, 1]"""
+
+    # find the maximum and minimum value of x
+    assert type(x) is np.ndarray
+    x_max,  x_min = x.max(), x.min()
+    if mode == 'negative':
+        for i in range(len(x)):
+            x[i] = (x[i] - x_max + x[i] - x_min) / (x_max - x_min)
+
+    else:
+        assert mode == 'positive'
+        for i in range(len(x)):
+            x[i] = (x[i] - x_min) / (x_max - x_min)
+
+    return x
+
+
+x_test = rescale(x1[1], mode='negative')
+
+
+# transfer the data to the polar coordinate
+def polarize(x):
+    """map time-series data from Cartesian coordinates to the polar coordinate"""
+    fai = np.arccos(x)
+    r = np.linspace(0, 1, len(x))
+
+    return fai, r
+
+
+fai, r = polarize(x_test)
+
+# plot polar figure
+plt.figure(2)
+ax = plt.subplot(111, projection='polar')
+plt.plot(fai, r)
+ax.set_rmax(1.5)
+ax.set_rticks(np.arange(0, 1.5, 0.5))
+ax.set_rlabel_position(-22.5)
+ax.grid(True)
+plt.show()
+
+
+def cos_sum(a, b):
+    """To work with tabulate."""
+    return(math.cos(a+b))
+
+
+# Gramian matrix
+def tabulate(x, y, f):
+    """Return a table of f(x, y). Useful for the Gram-like operations."""
+    return np.vectorize(f)(*np.meshgrid(x, y, sparse=True))
+
+
+GAF = tabulate(fai, fai, cos_sum)
+
+fig = plt.figure(3)
+plt.matshow(GAF)
+plt.axis('off')
+plt.show()
 
 
